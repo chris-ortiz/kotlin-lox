@@ -1,5 +1,6 @@
 package com.github.chrisortiz.lox
 
+import com.github.chrisortiz.lox.interpreter.Interpreter
 import com.github.chrisortiz.lox.lexer.Scanner
 import com.github.chrisortiz.lox.lexer.Token
 import com.github.chrisortiz.lox.lexer.TokenType.EOF
@@ -52,6 +53,8 @@ object Lox {
         if (hadError) return
 
         println(AstPrinter().print(expression!!))
+        println((expression.accept(Interpreter())))
+
     }
 
 
