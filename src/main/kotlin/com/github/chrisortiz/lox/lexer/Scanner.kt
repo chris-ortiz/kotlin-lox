@@ -1,6 +1,6 @@
-package com.github.chrisortiz.lox
+package com.github.chrisortiz.lox.lexer
 
-import com.github.chrisortiz.lox.TokenType.*
+import com.github.chrisortiz.lox.Lox
 import java.lang.Character.MIN_VALUE as nullChar
 
 class Scanner(private val source: String) {
@@ -9,13 +9,14 @@ class Scanner(private val source: String) {
     private var current = 0
     private var line = 1
     private val digits: CharRange = '0'..'9'
+
     fun scanTokens(): List<Token> {
         while (!isAtEnd()) {
             start = current
             scanToken()
         }
 
-        tokens.add(Token(EOF, "", null, line))
+        tokens.add(Token(TokenType.EOF, "", null, line))
         return tokens
     }
 
@@ -23,45 +24,45 @@ class Scanner(private val source: String) {
         val c = advance()
 
         when (c) {
-            '(' -> addToken(LEFT_PAREN)
-            ')' -> addToken(RIGHT_PAREN)
-            '{' -> addToken(LEFT_BRACE)
-            '}' -> addToken(RIGHT_BRACE)
-            ',' -> addToken(COMMA)
-            '.' -> addToken(DOT)
-            '-' -> addToken(MINUS)
-            '+' -> addToken(PLUS)
-            ';' -> addToken(SEMICOLON)
-            '*' -> addToken(STAR)
+            '(' -> addToken(TokenType.LEFT_PAREN)
+            ')' -> addToken(TokenType.RIGHT_PAREN)
+            '{' -> addToken(TokenType.LEFT_BRACE)
+            '}' -> addToken(TokenType.RIGHT_BRACE)
+            ',' -> addToken(TokenType.COMMA)
+            '.' -> addToken(TokenType.DOT)
+            '-' -> addToken(TokenType.MINUS)
+            '+' -> addToken(TokenType.PLUS)
+            ';' -> addToken(TokenType.SEMICOLON)
+            '*' -> addToken(TokenType.STAR)
             '!' -> addToken(
                 if (match('=')) {
-                    BANG_EQUAL
+                    TokenType.BANG_EQUAL
                 } else {
-                    BANG
+                    TokenType.BANG
                 }
             )
 
             '=' -> addToken(
                 if (match('=')) {
-                    EQUAL_EQUAL
+                    TokenType.EQUAL_EQUAL
                 } else {
-                    EQUAL
+                    TokenType.EQUAL
                 }
             )
 
             '<' -> addToken(
                 if (match('=')) {
-                    LESS_EQUAL
+                    TokenType.LESS_EQUAL
                 } else {
-                    LESS
+                    TokenType.LESS
                 }
             )
 
             '>' -> addToken(
                 if (match('=')) {
-                    GREATER_EQUAL
+                    TokenType.GREATER_EQUAL
                 } else {
-                    GREATER
+                    TokenType.GREATER
                 }
             )
 
@@ -70,7 +71,7 @@ class Scanner(private val source: String) {
                     advance()
                 }
             } else {
-                addToken(SLASH)
+                addToken(TokenType.SLASH)
             }
 
             ' ', '\r', '\t' -> Unit
@@ -85,7 +86,7 @@ class Scanner(private val source: String) {
                 if (isAlpha(c)) {
                     identifier()
                 } else {
-                    error(line, "Unexpected character")
+                    Lox.error(line, "Unexpected character")
                 }
             }
         }
@@ -95,7 +96,7 @@ class Scanner(private val source: String) {
         while (isAlphaNumeric(peek())) advance()
         val text = source.substring(start, current)
 
-        val type = keywords[text] ?: IDENTIFIER
+        val type = keywords[text] ?: TokenType.IDENTIFIER
         addToken(type)
     }
 
@@ -117,7 +118,7 @@ class Scanner(private val source: String) {
             while (peek() in digits) advance();
         }
 
-        addToken(NUMBER, source.substring(start, current).toDouble())
+        addToken(TokenType.NUMBER, source.substring(start, current).toDouble())
     }
 
     private fun string() {
@@ -127,13 +128,13 @@ class Scanner(private val source: String) {
         }
 
         if (isAtEnd()) {
-            error(line, "Unterminated string.")
+            Lox.error(line, "Unterminated string.")
             return
         }
 
         advance()
         val value = source.substring(start + 1, current - 1)
-        addToken(STRING, value)
+        addToken(TokenType.STRING, value)
     }
 
     private fun peek(): Char {
@@ -174,20 +175,20 @@ class Scanner(private val source: String) {
 }
 
 val keywords = mapOf(
-    "and" to AND,
-    "class" to CLASS,
-    "else" to ELSE,
-    "false" to FALSE,
-    "for" to FOR,
-    "fun" to FUN,
-    "if" to IF,
-    "nil" to NIL,
-    "or" to OR,
-    "print" to PRINT,
-    "return" to RETURN,
-    "super" to SUPER,
-    "this" to THIS,
-    "true" to TRUE,
-    "var" to VAR,
-    "while" to WHILE,
+    "and" to TokenType.AND,
+    "class" to TokenType.CLASS,
+    "else" to TokenType.ELSE,
+    "false" to TokenType.FALSE,
+    "for" to TokenType.FOR,
+    "fun" to TokenType.FUN,
+    "if" to TokenType.IF,
+    "nil" to TokenType.NIL,
+    "or" to TokenType.OR,
+    "print" to TokenType.PRINT,
+    "return" to TokenType.RETURN,
+    "super" to TokenType.SUPER,
+    "this" to TokenType.THIS,
+    "true" to TokenType.TRUE,
+    "var" to TokenType.VAR,
+    "while" to TokenType.WHILE,
 )

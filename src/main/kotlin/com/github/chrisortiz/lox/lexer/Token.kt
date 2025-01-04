@@ -1,4 +1,4 @@
-package com.github.chrisortiz.lox;
+package com.github.chrisortiz.lox.lexer
 
 enum class TokenType {
     // Single-character tokens.
