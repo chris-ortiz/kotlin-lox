@@ -10,7 +10,8 @@ import com.github.chrisortiz.lox.lexer.TokenType.*
  * program -> declaration* EOF ;
  * declaration -> varDecl | statement ;
  * varDecl -> "var" IDENTIFIER ("=" expression)? ";" ;
- * statement -> exprStmt | printStmt | block ;
+ * statement -> exprStmt | ifStmt | printStmt | block ;
+ * ifStmt -> "if" "(" expression ")" statement ("else" statement)? ;
  * block -> "{" declaration* "}" ;
  * exprStmt -> expression ";" ;
  * printStmt -> "print" expression ";";
@@ -64,9 +65,25 @@ class Parser(val tokens: List<Token>) {
     }
 
     private fun statement() = when {
+        match(IF) -> ifStatement()
         match(PRINT) -> printStatement()
         match(LEFT_BRACE) -> Block(block())
         else -> expressionStatement()
+    }
+
+    private fun ifStatement(): Statement {
+        consume(LEFT_PAREN, "Expect '(' after 'if'.")
+        val condition = expression()
+        consume(RIGHT_PAREN, "Expect ')' after if condition.")
+
+        val thenBranch = statement()
+        var elseBranch: Statement? = null
+
+        if (match(ELSE)) {
+            elseBranch = statement()
+        }
+
+        return If(condition, thenBranch, elseBranch)
     }
 
     private fun block(): List<Statement> {

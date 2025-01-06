@@ -153,6 +153,16 @@ class Interpreter : ExpVisitor<Any?>, StmtVisitor<Unit> {
         executeBlock(block.statements, Environment(environment))
     }
 
+    override fun visitIf(stmt: If) {
+        if (isTruthy(evaluate(stmt.condition))) {
+            execute(stmt.thenBranch)
+        } else {
+            stmt.elseBranch?.let {
+                execute(it)
+            }
+        }
+    }
+
     private fun executeBlock(statements: List<Statement>, env: Environment) {
         val previous = environment
         try {

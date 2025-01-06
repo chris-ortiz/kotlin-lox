@@ -12,6 +12,7 @@ interface StmtVisitor<T> {
     fun visitPrintStmt(stmt: PrintStmt): T
     fun visitVarStmt(stmt: VarStmt): T
     fun visitBlock(block: Block): T
+    fun visitIf(stmt: If): T
 }
 
 data class ExpressionStmt(val expression: Expression) : Statement {
@@ -28,4 +29,8 @@ data class VarStmt(val name: Token, val initializer: Expression?) : Statement {
 
 data class Block(val statements: List<Statement>) : Statement {
     override fun <T> accept(visitor: StmtVisitor<T>) = visitor.visitBlock(this)
+}
+
+data class If(val condition: Expression, val thenBranch: Statement, val elseBranch: Statement?) : Statement {
+    override fun <T> accept(visitor: StmtVisitor<T>) = visitor.visitIf(this)
 }
