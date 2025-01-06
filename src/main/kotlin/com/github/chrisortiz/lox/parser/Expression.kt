@@ -6,6 +6,10 @@ interface Expression {
     fun <T> accept(visitor: ExpVisitor<T>): T
 }
 
+data class Logical(val left: Expression, val operator: Token, val right: Expression) : Expression {
+    override fun <T> accept(visitor: ExpVisitor<T>) = visitor.visitLogical(this)
+}
+
 data class Assign(val name: Token, val value: Expression) : Expression {
     override fun <T> accept(visitor: ExpVisitor<T>) = visitor.visitAssign(this)
 }
@@ -37,4 +41,5 @@ interface ExpVisitor<T> {
     fun visitUnary(unary: Unary): T
     fun visitVariable(variable: Variable): T
     fun visitAssign(assign: Assign): T
+    fun visitLogical(logical: Logical): T
 }

@@ -10,13 +10,17 @@ import com.github.chrisortiz.lox.lexer.TokenType.*
  * program -> declaration* EOF ;
  * declaration -> varDecl | statement ;
  * varDecl -> "var" IDENTIFIER ("=" expression)? ";" ;
- * statement -> exprStmt | ifStmt | printStmt | block ;
+ * statement -> exprStmt | forStmt | ifStmt | printStmt | whileStmt | block ;
+ * forStmt -> "for" "(" ( varDecl | exprStmt | ";" ) expression? ";" expression? ")" statement ;
+ * whileStmt -> "while" "(" expression ")" statement ;
  * ifStmt -> "if" "(" expression ")" statement ("else" statement)? ;
  * block -> "{" declaration* "}" ;
  * exprStmt -> expression ";" ;
  * printStmt -> "print" expression ";";
  * expression → assignment ;
- * assignment -> IDENTIFIER "=" assignment | equality
+ * assignment -> IDENTIFIER "=" assignment | equality | logic_or ;
+ * logic_or → logic_and ( "or" logic_and )* ;
+ * logic_and → equality ( "and" equality )* ;
  * equality → comparison ( ( "!=" | "==" ) comparison )* ;
  * comparison → term ( ( ">" | ">=" | "<" | "<=" ) term )* ;
  * term → factor ( ( "-" | "+" ) factor )* ;
@@ -65,10 +69,55 @@ class Parser(val tokens: List<Token>) {
     }
 
     private fun statement() = when {
+        match(FOR) -> forStatement()
         match(IF) -> ifStatement()
+        match(WHILE) -> whileStatement()
         match(PRINT) -> printStatement()
         match(LEFT_BRACE) -> Block(block())
         else -> expressionStatement()
+    }
+
+    private fun forStatement(): Statement {
+        consume(LEFT_PAREN, "Expect '(' after 'for'.")
+
+        val initializer = when {
+            match(SEMICOLON) -> null
+            match(VAR) -> varDeclaration()
+            else -> expressionStatement()
+        }
+
+        val condition = if (!check(SEMICOLON)) expression() else null
+        consume(SEMICOLON, "Expect ';' after loop condition.")
+
+        val increment = if (!check(RIGHT_PAREN)) expression() else null
+        consume(RIGHT_PAREN, "Expect ')' after for clauses.")
+
+        var body = statement()
+
+        if (increment != null) {
+            body = Block(listOf(body, ExpressionStmt(increment)))
+        }
+
+        body = if (condition == null) {
+            While(Literal(true), body)
+        } else {
+            While(condition, body)
+        }
+
+        if (initializer != null) {
+            body = Block(listOf(initializer, body))
+        }
+
+        return body
+    }
+
+    private fun whileStatement(): Statement {
+        consume(LEFT_PAREN, "Expect '(' after 'while'.")
+        val condition = expression()
+        consume(RIGHT_PAREN, "Expect ')' after condition.")
+        val body = statement()
+
+        return While(condition, body)
     }
 
     private fun ifStatement(): Statement {
@@ -114,7 +163,7 @@ class Parser(val tokens: List<Token>) {
 
 
     private fun assignment(): Expression {
-        val expr = equality()
+        val expr = or()
 
         if (match(EQUAL)) {
             val equals = previous()
@@ -130,6 +179,30 @@ class Parser(val tokens: List<Token>) {
         }
 
         return expr
+    }
+
+    private fun or(): Expression {
+        var expression = and()
+
+        while (match(OR)) {
+            val operator = previous()
+            val right = and()
+            expression = Logical(expression, operator, right)
+        }
+
+        return expression
+    }
+
+    private fun and(): Expression {
+        var expression = equality()
+
+        while (match(AND)) {
+            val operator = previous()
+            val right = equality()
+            expression = Logical(expression, operator, right)
+        }
+
+        return expression
     }
 
     private fun equality(): Expression {

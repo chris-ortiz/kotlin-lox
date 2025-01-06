@@ -13,6 +13,7 @@ interface StmtVisitor<T> {
     fun visitVarStmt(stmt: VarStmt): T
     fun visitBlock(block: Block): T
     fun visitIf(stmt: If): T
+    fun visitWhile(stmt: While): T
 }
 
 data class ExpressionStmt(val expression: Expression) : Statement {
@@ -33,4 +34,8 @@ data class Block(val statements: List<Statement>) : Statement {
 
 data class If(val condition: Expression, val thenBranch: Statement, val elseBranch: Statement?) : Statement {
     override fun <T> accept(visitor: StmtVisitor<T>) = visitor.visitIf(this)
+}
+
+data class While(val condition: Expression, val body: Statement) : Statement {
+    override fun <T> accept(visitor: StmtVisitor<T>) = visitor.visitWhile(this)
 }

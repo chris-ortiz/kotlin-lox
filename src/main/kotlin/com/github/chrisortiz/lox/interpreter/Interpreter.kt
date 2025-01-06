@@ -114,6 +114,18 @@ class Interpreter : ExpVisitor<Any?>, StmtVisitor<Unit> {
         return value
     }
 
+    override fun visitLogical(logical: Logical): Any? {
+        val left = evaluate(logical.left)
+
+        if (logical.operator.tokenType == OR) {
+            if (isTruthy(left)) return left
+        } else {
+            if (!isTruthy(left)) return left
+        }
+
+        return evaluate(logical.right)
+    }
+
     private fun checkNumberOperand(operator: Token, vararg operands: Any?) {
         operands.forEach {
             if (it !is Double) {
@@ -160,6 +172,12 @@ class Interpreter : ExpVisitor<Any?>, StmtVisitor<Unit> {
             stmt.elseBranch?.let {
                 execute(it)
             }
+        }
+    }
+
+    override fun visitWhile(stmt: While) {
+        while (isTruthy(evaluate(stmt.condition))) {
+            execute(stmt.body)
         }
     }
 
