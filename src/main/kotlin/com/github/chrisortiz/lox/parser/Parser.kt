@@ -7,7 +7,15 @@ import com.github.chrisortiz.lox.lexer.TokenType.*
 
 /**
  * BNF grammar:
- * expression → equality ;
+ * program -> declaration* EOF ;
+ * declaration -> varDecl | statement ;
+ * varDecl -> "var" IDENTIFIER ("=" expression)? ";" ;
+ * statement -> exprStmt | printStmt | block ;
+ * block -> "{" declaration* "}" ;
+ * exprStmt -> expression ";" ;
+ * printStmt -> "print" expression ";";
+ * expression → assignment ;
+ * assignment -> IDENTIFIER "=" assignment | equality
  * equality → comparison ( ( "!=" | "==" ) comparison )* ;
  * comparison → term ( ( ">" | ">=" | "<" | "<=" ) term )* ;
  * term → factor ( ( "-" | "+" ) factor )* ;
@@ -15,20 +23,97 @@ import com.github.chrisortiz.lox.lexer.TokenType.*
  * unary → ( "!" | "-" ) unary
  * | primary ;
  * primary → NUMBER | STRING | "true" | "false" | "nil"
- * | "(" expression ")" ;
+ * | "(" expression ")" | IDENTIFIER ;
  */
 class Parser(val tokens: List<Token>) {
     private var current: Int = 0
 
-    fun parse(): Expression? {
+    fun parse(): List<Statement> {
+        val statements = mutableListOf<Statement>()
+
+        while (!isAtEnd()) {
+            declaration()?.let {
+                statements.add(it)
+            }
+        }
+        return statements
+    }
+
+    private fun declaration(): Statement? {
         return try {
-            expression()
-        } catch (_: Exception) {
+            when {
+                match(VAR) -> varDeclaration()
+                else -> statement()
+            }
+        } catch (_: ParserError) {
+            synchronize()
             null
         }
     }
 
-    private fun expression() = equality()
+    private fun varDeclaration(): Statement {
+        val name = consume(IDENTIFIER, "Expect variable name.")
+        var initializer: Expression? = null
+
+        if (match(EQUAL)) {
+            initializer = expression()
+        }
+
+        consume(SEMICOLON, "Expect ';' after variable declaration.")
+        return VarStmt(name, initializer)
+    }
+
+    private fun statement() = when {
+        match(PRINT) -> printStatement()
+        match(LEFT_BRACE) -> Block(block())
+        else -> expressionStatement()
+    }
+
+    private fun block(): List<Statement> {
+        val statements = mutableListOf<Statement>()
+
+        while (!check(RIGHT_BRACE)) {
+            declaration()?.let {
+                statements.add(it)
+            }
+        }
+        consume(RIGHT_BRACE, "Expect '}' after block.")
+        return statements
+    }
+
+    private fun printStatement(): Statement {
+        val value = expression()
+        consume(SEMICOLON, "Expect ';' after value.")
+        return PrintStmt(value)
+    }
+
+    private fun expressionStatement(): Statement {
+        val expr = expression()
+        consume(SEMICOLON, "Expect ';' after expression.")
+        return ExpressionStmt(expr)
+    }
+
+    private fun expression() = assignment()
+
+
+    private fun assignment(): Expression {
+        val expr = equality()
+
+        if (match(EQUAL)) {
+            val equals = previous()
+            val value = assignment()
+
+
+            if (expr is Variable) {
+                val name = expr.name
+                return Assign(name, value)
+            }
+
+            error(equals, "Invalid assignment target.")
+        }
+
+        return expr
+    }
 
     private fun equality(): Expression {
         var expression = comparison()
@@ -93,13 +178,14 @@ class Parser(val tokens: List<Token>) {
             match(TRUE) -> Literal(true)
             match(NIL) -> Literal(null)
             match(NUMBER, STRING) -> Literal(previous().literal)
+            match(IDENTIFIER) -> Variable(previous())
             match(LEFT_PAREN) -> {
                 val expression = expression()
                 consume(RIGHT_PAREN, "Expect ')' after expression.")
                 Grouping(expression)
             }
 
-            else -> throw error(peek(), "Expect expression.")
+            else -> throw error(peek(), "Expected expression.")
         }
     }
 
